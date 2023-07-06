@@ -51,7 +51,7 @@ questions = [lemmatize_sentence(questions) for questions in questions]
 questions = np.asarray(questions)
 questions = np.unique(questions)
 
-vectorizer = CountVectorizer(lowercase=True)  # TODO: check other params
+vectorizer = CountVectorizer(lowercase=True, ngram_range=(1, 3))  # TODO: check other params
 X = vectorizer.fit_transform(questions)
 
 new_question = "What Happens When Life Insurance Is Paid Up?"
