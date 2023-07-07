@@ -1,3 +1,4 @@
+import json
 import nltk
 import numpy as np
 import pandas as pd
@@ -35,6 +36,34 @@ def lemmatize_sentence(sentence: str) -> str:
     return " ".join(lemmatized_tokens)
 
 
+def check_performance() -> float:
+    """
+    Calculate performance of finding similar questions
+
+    :return:
+        score (lesser is better)
+    """
+    with open("../../data/test_questions_json.json") as json_file:
+        json_data = json.load(json_file)
+
+    test_questions = json_data["question"]
+    original = json_data["original"]
+
+    test_questions = [stem_sentence(test_question) for test_question in test_questions]
+    test_questions = vectorizer.transform(test_questions)
+    distances, indices = knn.kneighbors(test_questions.A)
+
+    original = [stem_sentence(orig) for orig in original]
+    original = vectorizer.transform(original)
+    indices_original = np.where((X.A == original.A[:, None]).all(-1))[1]
+
+    x = np.where(indices == indices_original[:, None])[1]
+    penalization = (indices_original.shape[0] - x.shape[0]) * 2 * N
+    score = (x.sum() + penalization) / indices_original.shape[0]
+
+    return score
+
+
 nltk.download("punkt")  # used for tokenization
 nltk.download("wordnet")  # used for lemmatization
 
@@ -47,16 +76,14 @@ df = pd.read_csv("../../data/insurance_qna_dataset.csv", sep="\t")
 df.drop(columns=df.columns[0], axis=1, inplace=True)
 
 questions = df.iloc[:, 0].to_numpy()
-questions = [lemmatize_sentence(questions) for questions in questions]
+questions = [stem_sentence(question) for question in questions]
 questions = np.asarray(questions)
 questions = np.unique(questions)
 
-vectorizer = CountVectorizer(lowercase=True, ngram_range=(1, 3))  # TODO: check other params
+vectorizer = CountVectorizer(lowercase=True)  # TODO: check other params, fix n-gram problem
 X = vectorizer.fit_transform(questions)
 
-new_question = "What Happens When Life Insurance Is Paid Up?"
-new_question = lemmatize_sentence(new_question)
-new_question = vectorizer.transform([new_question])
-
 knn = NearestNeighbors(n_neighbors=N, metric=metric[2]).fit(X.A)
-distances, indices = knn.kneighbors(new_question.A)
+
+score = check_performance()
+print(score)
