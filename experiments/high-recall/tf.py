@@ -2,10 +2,15 @@ import json
 import nltk
 import numpy as np
 import pandas as pd
+from scipy.sparse import csr_matrix
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.neighbors import NearestNeighbors
 from nltk.stem import PorterStemmer, WordNetLemmatizer
 from nltk.tokenize import word_tokenize
+
+
+N_NEIGHBOURS = 100  # number of similar questions
+METRIC = ("euclidean", "cityblock", "cosine")  # metric to be used in KNN
 
 
 def stem_sentence(sentence: str) -> str:
@@ -17,6 +22,7 @@ def stem_sentence(sentence: str) -> str:
     :return:
         stemmed sentence
     """
+    stemmer = PorterStemmer()  # TODO: try other stemmer types
     tokens = word_tokenize(sentence)
     stemmed_tokens = [stemmer.stem(token) for token in tokens]
     return " ".join(stemmed_tokens)
@@ -31,18 +37,26 @@ def lemmatize_sentence(sentence: str) -> str:
     :return:
         lemmatized sentence
     """
+    lemmatizer = WordNetLemmatizer()
     tokens = word_tokenize(sentence)
     lemmatized_tokens = [lemmatizer.lemmatize(token) for token in tokens]
     return " ".join(lemmatized_tokens)
 
 
-def check_performance() -> float:
+def check_performance(vectorizer: CountVectorizer, knn: NearestNeighbors, vectorized_questions: csr_matrix) -> float:
     """
     Calculate performance of finding similar questions
 
+    :param vectorizer: CountVectorizer
+        term frequency vectorizer
+    :param knn: NearestNeighbors
+        K-nearest neighbors
+    :param vectorized_questions: csr_matrix
+        input questions transformed with count vectorizer
     :return:
         score (lesser is better)
     """
+    print("Performance check started")
     with open("../../data/test_questions_json.json") as json_file:
         json_data = json.load(json_file)
 
@@ -50,40 +64,49 @@ def check_performance() -> float:
     original = json_data["original"]
 
     test_questions = [stem_sentence(test_question) for test_question in test_questions]
+    test_questions = np.asarray(test_questions)
     test_questions = vectorizer.transform(test_questions)
-    distances, indices = knn.kneighbors(test_questions.A)
+    _, indices = knn.kneighbors(test_questions.A)
 
     original = [stem_sentence(orig) for orig in original]
+    original = np.asarray(original)
     original = vectorizer.transform(original)
-    indices_original = np.where((X.A == original.A[:, None]).all(-1))[1]
+    indices_original = np.where((vectorized_questions.A == original.A[:, None]).all(-1))[1]
 
-    x = np.where(indices == indices_original[:, None])[1]
-    penalization = (indices_original.shape[0] - x.shape[0]) * 2 * N
-    score = (x.sum() + penalization) / indices_original.shape[0]
+    rank = np.where(indices == indices_original[:, None])[1]
+    penalization = (indices_original.shape[0] - rank.shape[0]) * 2 * N_NEIGHBOURS
+    score = (rank.sum() + penalization) / indices_original.shape[0]
 
     return score
 
 
-nltk.download("punkt")  # used for tokenization
-nltk.download("wordnet")  # used for lemmatization
+def start_tf() -> None:
+    """
+    Main logic of the TF module
 
-N = 100  # number of similar questions
-metric = ["euclidean", "cityblock", "cosine"]  # metric to be used in KNN
-stemmer = PorterStemmer()  # TODO: try other stemmer types
-lemmatizer = WordNetLemmatizer()
+    :return:
+        None
+    """
+    df = pd.read_csv("../../data/insurance_qna_dataset.csv", sep="\t")
+    df.drop(columns=df.columns[0], axis=1, inplace=True)
 
-df = pd.read_csv("../../data/insurance_qna_dataset.csv", sep="\t")
-df.drop(columns=df.columns[0], axis=1, inplace=True)
+    vectorizer = CountVectorizer(lowercase=True, ngram_range=(1, 2))  # TODO: check other params
 
-questions = df.iloc[:, 0].to_numpy()
-questions = [stem_sentence(question) for question in questions]
-questions = np.asarray(questions)
-questions = np.unique(questions)
+    questions = df.iloc[:, 0].to_numpy()
+    questions = [stem_sentence(question) for question in questions]
+    questions = np.asarray(questions)
+    questions = np.unique(questions)
+    vectorized_questions = vectorizer.fit_transform(questions)
+    print("TF applied")
 
-vectorizer = CountVectorizer(lowercase=True)  # TODO: check other params, fix n-gram problem
-X = vectorizer.fit_transform(questions)
+    knn = NearestNeighbors(n_neighbors=N_NEIGHBOURS, metric=METRIC[2]).fit(vectorized_questions.A)
+    print("KNN fitted")
 
-knn = NearestNeighbors(n_neighbors=N, metric=metric[2]).fit(X.A)
+    score = check_performance(vectorizer, knn, vectorized_questions)
+    print(f"Score: {score:.2f}")
 
-score = check_performance()
-print(score)
+
+if __name__ == "__main__":
+    nltk.download("punkt")  # used for tokenization
+    nltk.download("wordnet")  # used for lemmatization
+    start_tf()
