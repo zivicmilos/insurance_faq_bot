@@ -67,11 +67,11 @@ def check_performance(vectorizer: CountVectorizer, knn: NearestNeighbors, vector
 
     test_questions = np.asarray([stem_sentence(test_question) for test_question in test_questions])
     test_questions = vectorizer.transform(test_questions)
-    _, indices = knn.kneighbors(test_questions.A)
+    _, indices = knn.kneighbors(test_questions.toarray())
 
     original = np.asarray([stem_sentence(orig) for orig in original])
     original = vectorizer.transform(original)
-    indices_original = np.where((vectorized_questions.A == original.A[:, None]).all(-1))[1]
+    indices_original = np.where((vectorized_questions.toarray() == original.toarray()[:, None]).all(-1))[1]
 
     rank = np.where(indices == indices_original[:, None])[1]
     penalization = (indices_original.shape[0] - rank.shape[0]) * 2 * N_NEIGHBOURS
@@ -98,7 +98,7 @@ def start_tf() -> None:
     vectorized_questions = vectorizer.fit_transform(questions)
     print("TF applied")
 
-    knn = NearestNeighbors(n_neighbors=N_NEIGHBOURS, metric=METRIC[2]).fit(vectorized_questions.A)
+    knn = NearestNeighbors(n_neighbors=N_NEIGHBOURS, metric=METRIC[2]).fit(vectorized_questions.toarray())
     print("KNN fitted")
 
     score = check_performance(vectorizer, knn, vectorized_questions)
