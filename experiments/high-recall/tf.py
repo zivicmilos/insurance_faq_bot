@@ -1,13 +1,15 @@
+import cProfile
 import json
+import time
+
 import nltk
 import numpy as np
 import pandas as pd
+from nltk.stem import PorterStemmer, WordNetLemmatizer
+from nltk.tokenize import word_tokenize
 from scipy.sparse import csr_matrix
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.neighbors import NearestNeighbors
-from nltk.stem import PorterStemmer, WordNetLemmatizer
-from nltk.tokenize import word_tokenize
-
 
 N_NEIGHBOURS = 100  # number of similar questions
 METRIC = ("euclidean", "cityblock", "cosine")  # metric to be used in KNN
@@ -63,13 +65,11 @@ def check_performance(vectorizer: CountVectorizer, knn: NearestNeighbors, vector
     test_questions = json_data["question"]
     original = json_data["original"]
 
-    test_questions = [stem_sentence(test_question) for test_question in test_questions]
-    test_questions = np.asarray(test_questions)
+    test_questions = np.asarray([stem_sentence(test_question) for test_question in test_questions])
     test_questions = vectorizer.transform(test_questions)
     _, indices = knn.kneighbors(test_questions.A)
 
-    original = [stem_sentence(orig) for orig in original]
-    original = np.asarray(original)
+    original = np.asarray([stem_sentence(orig) for orig in original])
     original = vectorizer.transform(original)
     indices_original = np.where((vectorized_questions.A == original.A[:, None]).all(-1))[1]
 
@@ -87,15 +87,14 @@ def start_tf() -> None:
     :return:
         None
     """
+    start_time = time.time()
     df = pd.read_csv("../../data/insurance_qna_dataset.csv", sep="\t")
     df.drop(columns=df.columns[0], axis=1, inplace=True)
 
     vectorizer = CountVectorizer(lowercase=True, ngram_range=(1, 2))  # TODO: check other params
 
-    questions = df.iloc[:, 0].to_numpy()
-    questions = [stem_sentence(question) for question in questions]
-    questions = np.asarray(questions)
-    questions = np.unique(questions)
+    questions = np.unique(df.iloc[:, 0].to_numpy())
+    questions = np.asarray([stem_sentence(question) for question in questions])
     vectorized_questions = vectorizer.fit_transform(questions)
     print("TF applied")
 
@@ -103,10 +102,10 @@ def start_tf() -> None:
     print("KNN fitted")
 
     score = check_performance(vectorizer, knn, vectorized_questions)
-    print(f"Score: {score:.2f}")
+    print(f"Score: {score:.2f} | ETA: {time.time() - start_time:.2f}s")
 
 
 if __name__ == "__main__":
     nltk.download("punkt")  # used for tokenization
     nltk.download("wordnet")  # used for lemmatization
-    start_tf()
+    cProfile.run('start_tf()')
