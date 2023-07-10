@@ -7,33 +7,42 @@ from nltk.stem import (
 from nltk.tokenize import word_tokenize
 
 
-def stem_sentence(sentence: str) -> str:
+def stem_document(document: str, stemmer: str = "porter") -> str:
     """
-    Stem the input sentence and return processed sentence
+    Stem the input document and return processed document
 
-    :param sentence: str
-        sentence to be stemmed
+    :param document: str
+        document to be stemmed
+    :param stemmer: str
+        stemmer type
     :return:
-        stemmed sentence
+        stemmed document
     """
-    # stemmer = PorterStemmer()
-    stemmer = SnowballStemmer("english")
-    # stemmer = LancasterStemmer()
-    tokens = word_tokenize(sentence)
+    if stemmer == "porter":
+        stemmer = PorterStemmer()
+    elif stemmer == "snowball":
+        stemmer = SnowballStemmer("english")
+    elif stemmer == "lancaster":
+        stemmer = LancasterStemmer()
+    else:
+        raise ValueError(
+            f"Stemmer type '{stemmer}' is not supported. Try with 'porter', 'snowball' or 'lancaster'."
+        )
+    tokens = word_tokenize(document)
     stemmed_tokens = [stemmer.stem(token) for token in tokens]
     return " ".join(stemmed_tokens)
 
 
-def lemmatize_sentence(sentence: str) -> str:
+def lemmatize_document(document: str) -> str:
     """
-    Lemmatize the input sentence and return processed sentence
+    Lemmatize the input document and return processed document
 
-    :param sentence: str
-        sentence to be lemmatized
+    :param document: str
+        document to be lemmatized
     :return:
-        lemmatized sentence
+        lemmatized document
     """
     lemmatizer = WordNetLemmatizer()
-    tokens = word_tokenize(sentence)
+    tokens = word_tokenize(document)
     lemmatized_tokens = [lemmatizer.lemmatize(token) for token in tokens]
     return " ".join(lemmatized_tokens)
