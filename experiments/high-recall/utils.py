@@ -27,7 +27,7 @@ def preprocess_documents(
         documents = np.asarray(
             [stem_document(document, stemmer) for document in documents]
         )
-    elif preprocessing == "lemmatizing":
+    elif preprocessing == "lemmatization":
         documents = np.asarray([lemmatize_document(document) for document in documents])
 
     return documents

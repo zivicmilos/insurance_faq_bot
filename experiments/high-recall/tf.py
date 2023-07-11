@@ -10,9 +10,9 @@ from sklearn.neighbors import NearestNeighbors
 from utils import check_performance, preprocess_documents
 
 N_NEIGHBOURS = 100  # number of similar questions
-METRIC = ("euclidean", "cityblock", "cosine")  # metric to be used in KNN
-PREPROCESSING = "stemming"
-STEMMER = "snowball"
+METRIC = "cosine"  # metric to be used in KNN, e.g. "euclidean", "cityblock", "cosine"
+PREPROCESSING = "stemming"  # preprocessing technique, e.g. "stemming", "lemmatization"
+STEMMER = "snowball"  # stemmer type, e.g. "porter", "snowball", "lancaster"
 
 
 def start_tf() -> None:
@@ -36,7 +36,7 @@ def start_tf() -> None:
     vectorized_questions = np.unique(vectorized_questions.toarray(), axis=0)
     print("TF applied")
 
-    knn = NearestNeighbors(n_neighbors=N_NEIGHBOURS, metric=METRIC[2]).fit(
+    knn = NearestNeighbors(n_neighbors=N_NEIGHBOURS, metric=METRIC).fit(
         vectorized_questions
     )
     print("KNN fitted")

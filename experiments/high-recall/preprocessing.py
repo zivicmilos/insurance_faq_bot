@@ -21,7 +21,7 @@ def stem_document(document: str, stemmer: str = "porter") -> str:
     if stemmer == "porter":
         stemmer = PorterStemmer()
     elif stemmer == "snowball":
-        stemmer = SnowballStemmer("english")
+        stemmer = SnowballStemmer(language="english")
     elif stemmer == "lancaster":
         stemmer = LancasterStemmer()
     else:
