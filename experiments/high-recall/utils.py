@@ -69,9 +69,13 @@ def check_performance(
 
     original = preprocess_documents(original, preprocessing, stemmer)
     original = vectorizer.transform(original)
-    indices_original = np.where(
-        (vectorized_questions == original.toarray()[:, None]).all(-1)
-    )[1]
+
+    original = list(map(set, vectorizer.inverse_transform(original)))
+    vectorized_questions = list(
+        map(set, vectorizer.inverse_transform(vectorized_questions))
+    )
+
+    indices_original = np.asarray([vectorized_questions.index(o) for o in original])
 
     rank = np.where(indices == indices_original[:, None])[1]
     penalization = (indices_original.shape[0] - rank.shape[0]) * 2 * knn.n_neighbors
